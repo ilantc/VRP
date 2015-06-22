@@ -11,8 +11,15 @@ class VRP:
         self.targetDemand    = [target['demand']                for target in targetsData]
         self.nTargets        = len(self.targetDemand)
 
-    def bfsConfBuilderWrapper(self, buildParam, runParam):
-        pass
+    def bfsConfBuilderWrapper(self, buildParam, runParam,MaxSizeConf):
+        confs=[]
+        emptyconf=conf([], self, 0, 0, 0)
+        confs.append(emptyconf)
+        for i in xrange(0,MaxSizeConf+1):
+            confs.extend(bfsConfBuilder(buildParam, runParam, confs))
+        confs=trimConfs(confs,runParam)
+    return confs
+
         
     def checkFeasible(self,conf,targetId):
         
@@ -45,11 +52,13 @@ class VRP:
         return sqrt( ((x1 - x2)^2) + ((y1 - y2)^2) )
     
     def trimConfs(self,confs,trimParam):
-        pass
+        confs=sorted(confs, key=lambda conf: conf.val) 
+        confs=confs[0:trimParam]
+    return confs
     
     def bfsConfBuilder(self, buildParam, runParam, lastLevelConfs):
         newConfs = []
-        for conf in lastLevelConfs:
+        for conf in lastLevelConfs: #need to check the first empty conf
             lastDistanceTravelled = self.getDistance(conf.targets[-1],0)
             for targetId in range(self.nTargets):
                 if targetId in conf.targets:
