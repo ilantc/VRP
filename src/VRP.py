@@ -28,8 +28,8 @@ class VRP:
         
     def checkFeasible(self,conf,targetId):
         
-        finishTime      = conf.finishTime
-        capacityLeft    = self.capacity - conf.currentCapacity
+        finishTime  = conf.finishTime
+        capacity    = conf.currentCapacity
         if len(conf.targets) == 0:
             lastTarget = 0
         else:
@@ -39,8 +39,8 @@ class VRP:
         success     = False
         
         # capacity constraints
-        newCapacity = capacityLeft - self.targetDemand[targetId]
-        if newCapacity < 0:
+        newCapacity = capacity + self.targetDemand[targetId]
+        if newCapacity > self.capacity:
             return (success,newFinish,newCapacity)
         
         # time window constraints
@@ -60,7 +60,7 @@ class VRP:
         return sqrt( math.pow(x1 - x2,2) + math.pow(y1 - y2,2) )
     
     def trimConfs(self,confs,trimParam, removeDups = False):
-        return confs
+#         return confs
         sortedConfs=sorted(confs, key=lambda conf: conf.val)
         outputConfs = sortedConfs[0:trimParam]
         if removeDups:
@@ -87,6 +87,8 @@ class VRP:
                     continue
                 (success, newFinishTime,newCapacity) = self.checkFeasible(currConf,targetId)
                 if not success:
+                    if ((currConf.targets == [5, 3, 7, 8, 10, 11, 9]) and (targetId == 6)):
+                        print "here"
                     continue
                 newConfTargets  = currConf.targets + [targetId]
                 newConfVal      = currConf.val - lastDistanceTravelled + self.getDistance(targetId,0) + self.getDistance(lastTarget, targetId) 
@@ -129,7 +131,20 @@ class conf:
             prevTarget       = target
             
         val         += (self.VRPobject.getDistance(prevTarget,0) / self.VRPobject.speed)
-        return (val,finishTime,self.VRPobject.capacity - currentDemand)
-            
+        return (val,finishTime,currentDemand)
+    
+    def printConfTimes(self):
+        prevTarget = 0
+        currTime   = 0
+        for target in self.targets:
+            timeToTravel     = (self.VRPobject.getDistance(prevTarget,target) / self.VRPobject.speed)
+            timeToService    = self.VRPobject.targetDurations[target]
+            earlyArrival     = timeToTravel + currTime 
+            windowStart      = self.VRPobject.targetsWindows[target][0]
+            waitingTime      = max(0,windowStart - earlyArrival)
+            print target, "starting at", currTime + timeToTravel + waitingTime, "window is", self.VRPobject.targetsWindows[target]
+            currTime        += timeToTravel + waitingTime + timeToService 
+            prevTarget       = target
+                  
         
     

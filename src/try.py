@@ -2,18 +2,36 @@ import VRP
 import readers
 from gurobiHandler import vrpSolver
 from VRP import conf
+import itertools
 
 reader = readers.solomonFileReader()
 
-fileName = "../data/solomon_25/C104.txt"
+fileName = "../data/solomon_25/C101.txt"
 data = reader.readFile(fileName)
 vrp = VRP.VRP(data["nTrucks"], data["capacity"], data["targets"])
 
-confs = vrp.bfsConfBuilderWrapper(25000,2500, 15)
-
+confs = vrp.bfsConfBuilderWrapper(80000,80000, 15)
+# 
 s = vrpSolver(confs, vrp)
 s.buildIP()
 s.solve()
+# targets = [5, 3, 7, 8, 10, 11, 9, 6, 4, 2, 1]
+# for i in range(len(targets) + 1):
+#     c = conf(targets[:i],vrp)
+    # c.printConfTimes()
+#     print "generated conf",c.targets,"=",len(filter(lambda con: con.targets == c.targets,confs))
+
+# g = itertools.permutations([3,4,5,6,7,8,9,10,11])
+# bestVal = 10000
+# bestC = None
+# for p in g:
+#     c = conf(list(p) + [2,1], vrp)
+#     print c.val,";",c.finishTime,";",c.targets
+#     if c.val < bestVal:
+#         bestVal = c.val
+#         bestC = c
+# print "best val is", bestVal,"best finish time",bestC.finishTime ,"best C is",bestC.targets
+        
 
 # targets = [[13,17,18,19,15,16,14,12],\
 #            [43,42,41,40,44,46,45,48,51,50,52,49,47],\
