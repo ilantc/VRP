@@ -1,5 +1,4 @@
 import gurobipy
-import gurobipy.GRB as GRB
 
 class vrpSolver():
     
@@ -8,9 +7,9 @@ class vrpSolver():
         for i in range(1,VRPobject.nTargets):
             indices[i] = []
         cId = 0
-        f = lambda t: indices[t].append[cId]
+#         f = lambda t: indices[t].append[cId]
         for c in confs:
-            map(f, c.targets)
+            map(lambda t: indices[t].append(cId), c.targets)
             cId += 1 
         
         self.confs = confs
@@ -24,7 +23,7 @@ class vrpSolver():
         # variables
         x = {}
         for i in range(len(self.confs)):
-            x[i] = model.addVar(vtype=GRB.BINARY, name=str(i))
+            x[i] = model.addVar(vtype=gurobipy.GRB.BINARY, name=str(i))
         model.update()
 
         # constraints
@@ -33,18 +32,24 @@ class vrpSolver():
         
         # objective
         model.setObjective(gurobipy.quicksum(x[i]*(self.confs[i].val + self.M) for i in range(len(self.confs))))
-        model.setAttr("modelSense", GRB.MINIMIZE)
+        model.setAttr("modelSense", gurobipy.GRB.MINIMIZE)
         model.update()
         
-        model.get
         self.x = x
         self.model = model
     
     def solve(self):
         # Compute optimal solution
         self.model.optimize()
-        if self.model.status == GRB.status.OPTIMAL:
+        chosenConfs = []
+        if self.model.status == gurobipy.GRB.status.OPTIMAL:
             for i in range(len(self.confs)):
                 if self.x[i].x > 0:
                     print "conf", i, "was chosen"
+                    chosenConfs.append(i)
             print "\nopt val is", self.model.getAttr("ObjVal")
+        totalDist = 0.0
+        for con in chosenConfs:
+            totalDist += self.confs[con].val
+            print self.confs[con].targets
+        print "\nnVehicels =",len(chosenConfs), "total distance =",totalDist

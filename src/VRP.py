@@ -1,4 +1,5 @@
 from math import sqrt
+import math
 class VRP:
     
     def __init__(self,nTrucks,capacity,targetsData, speed = 1):
@@ -15,23 +16,30 @@ class VRP:
         confs=[]
         emptyconf=conf([], self, 0, 0, 0)
         confs.append(emptyconf)
-        for i in xrange(0,MaxSizeConf+1):
-            confs.extend(bfsConfBuilder(buildParam, runParam, confs))
-        confs=trimConfs(confs,runParam)
-    return confs
+        lastLevelConfs = confs
+        for confSize in xrange(0,MaxSizeConf+1):
+            newConfs        = self.bfsConfBuilder(lastLevelConfs)
+            lastLevelConfs  = self.trimConfs(newConfs, buildParam)
+            newConfsForRun  = self.trimConfs(lastLevelConfs, runParam)
+            confs.extend(newConfsForRun)
+            print "conf size =",confSize, "built", len(newConfs), "chosen", len(lastLevelConfs)
+        return confs
 
         
     def checkFeasible(self,conf,targetId):
         
         finishTime      = conf.finishTime
-        capacityLeft    = conf.currentCapacity
-        lastTarget      = conf.targets[-1]
+        capacityLeft    = self.capacity - conf.currentCapacity
+        if len(conf.targets) == 0:
+            lastTarget = 0
+        else:
+            lastTarget = conf.targets[-1]
         
         newFinish   = -1
         success     = False
         
         # capacity constraints
-        newCapacity = capacityLeft - self.capacity(targetId)
+        newCapacity = capacityLeft - self.targetDemand[targetId]
         if newCapacity < 0:
             return (success,newFinish,newCapacity)
         
@@ -39,41 +47,54 @@ class VRP:
         arrivalTime = finishTime + self.getDistance(lastTarget, targetId)
         windowStart = self.targetsWindows[targetId][0]
         windowEnd   = self.targetsWindows[targetId][1]
-        waitingTime = max(0,windowStart - arrivalTime)
         if arrivalTime > windowEnd:
             return (success,newFinish,newCapacity)
+        waitingTime = max(0,windowStart - arrivalTime)
         newFinish   = arrivalTime + self.targetDurations[targetId] + waitingTime
         success     = True
         return (success,newFinish,newCapacity)
         
     def getDistance(self,t1,t2):
-        (x1,y1) = self.targetLocations(t1)
-        (x2,y2) = self.targetLocations(t2)
-        return sqrt( ((x1 - x2)^2) + ((y1 - y2)^2) )
+        (x1,y1) = self.targetLocations[t1]
+        (x2,y2) = self.targetLocations[t2]
+        return sqrt( math.pow(x1 - x2,2) + math.pow(y1 - y2,2) )
     
-    def trimConfs(self,confs,trimParam):
-        confs=sorted(confs, key=lambda conf: conf.val) 
-        confs=confs[0:trimParam]
-    return confs
+    def trimConfs(self,confs,trimParam, removeDups = False):
+        return confs
+        sortedConfs=sorted(confs, key=lambda conf: conf.val)
+        outputConfs = sortedConfs[0:trimParam]
+        if removeDups:
+            targets2ConfId = {}
+            indexInSortedConfs = trimParam
+            indexInOutputConfs = 0 
+            nUniqueConfs = 0
+            # remove dups from output confs - and add more confs if possible
+#             while nUniqueConfs < trimParam:
+#                 if
+        return outputConfs 
     
-    def bfsConfBuilder(self, buildParam, runParam, lastLevelConfs):
+    def bfsConfBuilder(self, lastLevelConfs):
         newConfs = []
-        for conf in lastLevelConfs: #need to check the first empty conf
-            lastDistanceTravelled = self.getDistance(conf.targets[-1],0)
-            for targetId in range(self.nTargets):
-                if targetId in conf.targets:
+        for currConf in lastLevelConfs: #need to check the first empty conf
+            # hnadle 1st target 
+            if len(currConf.targets) == 0:
+                lastTarget = 0
+            else:
+                lastTarget = currConf.targets[-1]
+            lastDistanceTravelled = self.getDistance(lastTarget,0)
+            for targetId in range(1,self.nTargets):
+                if targetId in currConf.targets:
                     continue
-                (success, newFinishTime,newCapacity) = self.checkFeasible(conf,targetId)
+                (success, newFinishTime,newCapacity) = self.checkFeasible(currConf,targetId)
                 if not success:
                     continue
-                newConfTargets = conf.targets + [targetId]
-                newConfVal     = conf.val - lastDistanceTravelled + self.getDistance(targetId,0) 
-                
-                newConf = conf(newConfTargets, newConfVal, newFinishTime, newCapacity)
+                newConfTargets  = currConf.targets + [targetId]
+                newConfVal      = currConf.val - lastDistanceTravelled + self.getDistance(targetId,0) + self.getDistance(lastTarget, targetId) 
+                newConf         = conf(newConfTargets, self, newConfVal, newFinishTime, newCapacity)
                 newConfs.append(newConf)
-        newConfs = self.trimConfs(newConfs,buildParam)
         return newConfs
-                    
+        
+           
 class conf:
     
     # target do not include "0" target at start and end

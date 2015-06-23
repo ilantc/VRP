@@ -15,8 +15,8 @@ class solomonFileReader:
         # nTrucks and capacity
         line = f.next()
         lineData = line.strip().split()
-        data["nTrucks"] = lineData[0]
-        data["capacity"] = lineData[1]
+        data["nTrucks"] = int(lineData[0])
+        data["capacity"] = float(lineData[1])
         # skip 4
         for _ in range(4):
             f.next()
@@ -28,13 +28,13 @@ class solomonFileReader:
                 continue 
             lineData            = l.split()
             target = {}
-            target["id"]          = lineData[0]
-            target["x"]           = lineData[1]
-            target["y"]           = lineData[2]
-            target["demand"]      = lineData[3]
-            target["start"]       = lineData[4]
-            target["end"]         = lineData[5]
-            target["duration"]    = lineData[6]
+            target["id"]          = int(lineData[0])
+            target["x"]           = float(lineData[1])
+            target["y"]           = float(lineData[2])
+            target["demand"]      = float(lineData[3])
+            target["start"]       = float(lineData[4])
+            target["end"]         = float(lineData[5])
+            target["duration"]    = float(lineData[6])
             data['targets'].append(target)
         
         f.close()
