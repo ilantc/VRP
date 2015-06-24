@@ -20,9 +20,9 @@ class VRP:
         for confSize in xrange(0,MaxSizeConf+1):
             newConfs        = self.bfsConfBuilder(lastLevelConfs)
             lastLevelConfs  = self.trimConfs(newConfs, buildParam)
-            newConfsForRun  = self.trimConfs(lastLevelConfs, runParam)
+            newConfsForRun  = self.trimConfs(lastLevelConfs, runParam, True)
             confs.extend(newConfsForRun)
-            print "conf size =",confSize, "built", len(newConfs), "chosen", len(lastLevelConfs)
+            print "conf size =",confSize, "built", len(newConfs), "chosen for build", len(lastLevelConfs), "chosen for run", len(newConfsForRun)
         return confs
 
         
@@ -51,7 +51,9 @@ class VRP:
             return (success,newFinish,newCapacity)
         waitingTime = max(0,windowStart - arrivalTime)
         newFinish   = arrivalTime + self.targetDurations[targetId] + waitingTime
-        success     = True
+        # chek taht we return to depot in time
+        if newFinish + (self.getDistance(targetId,0) / self.speed) <= self.targetsWindows[0][1]:
+            success     = True
         return (success,newFinish,newCapacity)
         
     def getDistance(self,t1,t2):
@@ -63,16 +65,31 @@ class VRP:
     
     def trimConfs(self,confs,trimParam, removeDups = False):
 #         return confs
-        sortedConfs=sorted(confs, key=lambda conf: conf.val)
-        outputConfs = sortedConfs[0:trimParam]
-        if removeDups:
+        nConfs = len(confs)
+        sortedConfs = sorted(confs, key=lambda conf: conf.val)
+        outputConfs = []
+        if not removeDups:
+            outputConfs = sortedConfs[0:trimParam]
+        else:
+            # a mapping from target set to the best conf ID of that set
             targets2ConfId = {}
-            indexInSortedConfs = trimParam
-            indexInOutputConfs = 0 
+            indexInSortedConfs = 0
             nUniqueConfs = 0
             # remove dups from output confs - and add more confs if possible
-#             while nUniqueConfs < trimParam:
-#                 if
+            while (nUniqueConfs < trimParam) and (indexInSortedConfs < nConfs):
+                currTargetSet = tuple(sorted(sortedConfs[indexInSortedConfs].targets))
+                # if we encountered this set before
+                if targets2ConfId.has_key(currTargetSet):
+                    foundConfVal = outputConfs[targets2ConfId[currTargetSet]].val
+                    # if current val is better than what we saw
+                    if foundConfVal > sortedConfs[indexInSortedConfs].val:
+                        outputConfs[targets2ConfId[currTargetSet]] = sortedConfs[indexInSortedConfs]
+                else:
+                    # this conf is not yet encountered:
+                    outputConfs.append(sortedConfs[indexInSortedConfs])
+                    targets2ConfId[currTargetSet] = nUniqueConfs
+                    nUniqueConfs += 1
+                indexInSortedConfs += 1
         return outputConfs 
     
     def bfsConfBuilder(self, lastLevelConfs):
@@ -89,8 +106,6 @@ class VRP:
                     continue
                 (success, newFinishTime,newCapacity) = self.checkFeasible(currConf,targetId)
                 if not success:
-                    if ((currConf.targets == [5, 3, 7, 8, 10, 11, 9]) and (targetId == 6)):
-                        print "here"
                     continue
                 newConfTargets  = currConf.targets + [targetId]
                 newConfVal      = currConf.val - lastDistanceTravelled + self.getDistance(targetId,0) + self.getDistance(lastTarget, targetId) 
@@ -141,7 +156,7 @@ class conf:
         distanceRounded = 0.0
         for target in self.targets:
             timeToTravel     = (self.VRPobject.getDistance(prevTarget,target) / self.VRPobject.speed)
-            distanceRounded += float("{0:.2f}".format(self.VRPobject.getDistance(prevTarget,target)))
+            distanceRounded += self.VRPobject.getDistance(prevTarget,target)
             timeToService    = self.VRPobject.targetDurations[target]
             earlyArrival     = timeToTravel + currTime 
             windowStart      = self.VRPobject.targetsWindows[target][0]
@@ -149,8 +164,8 @@ class conf:
             print target, "starting at", currTime + timeToTravel + waitingTime, "window is", self.VRPobject.targetsWindows[target]
             currTime        += timeToTravel + waitingTime + timeToService 
             prevTarget       = target
-        distanceRounded += float("{0:.2f}".format(self.VRPobject.getDistance(prevTarget,0)))
-        print "total distance rounded to 2 points is", distanceRounded
+        distanceRounded += self.VRPobject.getDistance(prevTarget,0)
+        print "total distance is", distanceRounded
                   
         
     

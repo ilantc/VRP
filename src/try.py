@@ -6,11 +6,11 @@ import itertools
 
 reader = readers.solomonFileReader()
 
-fileName = "../data/solomon_25/C101.txt"
+fileName = "../data/solomon_25/C102.txt"
 data = reader.readFile(fileName)
 vrp = VRP.VRP(data["nTrucks"], data["capacity"], data["targets"])
 
-confs = vrp.bfsConfBuilderWrapper(80000,80000, 15)
+confs = vrp.bfsConfBuilderWrapper(500000,500000, 15)
  
 s = vrpSolver(confs, vrp)
 s.buildIP()

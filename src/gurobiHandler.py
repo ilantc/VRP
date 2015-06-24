@@ -15,7 +15,7 @@ class vrpSolver():
         self.confs = confs
         self.indices = indices
         self.VRPobj = VRPobject
-        self.M      = 10000 
+        self.M      = 1000 
             
     def buildIP(self):
         model = gurobipy.Model('VRPModel')
