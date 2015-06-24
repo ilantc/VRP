@@ -1,4 +1,4 @@
-from math import sqrt
+from math import sqrt, floor
 import math
 class VRP:
     
@@ -57,7 +57,9 @@ class VRP:
     def getDistance(self,t1,t2):
         (x1,y1) = self.targetLocations[t1]
         (x2,y2) = self.targetLocations[t2]
-        return sqrt( math.pow(x1 - x2,2) + math.pow(y1 - y2,2) )
+        # as done in http://pubsonline.informs.org/doi/pdf/10.1287/trsc.33.1.101 
+        output = floor(10 * sqrt( math.pow(x1 - x2,2) + math.pow(y1 - y2,2) ))/10
+        return output
     
     def trimConfs(self,confs,trimParam, removeDups = False):
 #         return confs
@@ -136,8 +138,10 @@ class conf:
     def printConfTimes(self):
         prevTarget = 0
         currTime   = 0
+        distanceRounded = 0.0
         for target in self.targets:
             timeToTravel     = (self.VRPobject.getDistance(prevTarget,target) / self.VRPobject.speed)
+            distanceRounded += float("{0:.2f}".format(self.VRPobject.getDistance(prevTarget,target)))
             timeToService    = self.VRPobject.targetDurations[target]
             earlyArrival     = timeToTravel + currTime 
             windowStart      = self.VRPobject.targetsWindows[target][0]
@@ -145,6 +149,8 @@ class conf:
             print target, "starting at", currTime + timeToTravel + waitingTime, "window is", self.VRPobject.targetsWindows[target]
             currTime        += timeToTravel + waitingTime + timeToService 
             prevTarget       = target
+        distanceRounded += float("{0:.2f}".format(self.VRPobject.getDistance(prevTarget,0)))
+        print "total distance rounded to 2 points is", distanceRounded
                   
         
     
