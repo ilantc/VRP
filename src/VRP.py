@@ -18,6 +18,8 @@ class VRP:
         confs.append(emptyconf)
         lastLevelConfs = confs
         for confSize in xrange(0,MaxSizeConf+1):
+            if len(lastLevelConfs) == 0:
+                break
             newConfs        = self.bfsConfBuilder(lastLevelConfs)
             lastLevelConfs  = self.trimConfs(newConfs, buildParam)
             newConfsForRun  = self.trimConfs(lastLevelConfs, runParam, True)
@@ -63,33 +65,36 @@ class VRP:
         output = floor(10 * sqrt( math.pow(x1 - x2,2) + math.pow(y1 - y2,2) ))/10
         return output
     
-    def trimConfs(self,confs,trimParam, removeDups = False):
+    def trimConfs(self,confs,trimParam, removeDupsTest = False):
 #         return confs
         nConfs = len(confs)
         sortedConfs = sorted(confs, key=lambda conf: conf.val)
         outputConfs = []
-        if not removeDups:
-            outputConfs = sortedConfs[0:trimParam]
+        if not removeDupsTest:
+            tuplize = lambda targetsSet: tuple([targetsSet[-1]] + sorted(targetsSet[:-1]))
         else:
-            # a mapping from target set to the best conf ID of that set
-            targets2ConfId = {}
-            indexInSortedConfs = 0
-            nUniqueConfs = 0
-            # remove dups from output confs - and add more confs if possible
-            while (nUniqueConfs < trimParam) and (indexInSortedConfs < nConfs):
-                currTargetSet = tuple(sorted(sortedConfs[indexInSortedConfs].targets))
-                # if we encountered this set before
-                if targets2ConfId.has_key(currTargetSet):
-                    foundConfVal = outputConfs[targets2ConfId[currTargetSet]].val
-                    # if current val is better than what we saw
-                    if foundConfVal > sortedConfs[indexInSortedConfs].val:
-                        outputConfs[targets2ConfId[currTargetSet]] = sortedConfs[indexInSortedConfs]
-                else:
-                    # this conf is not yet encountered:
-                    outputConfs.append(sortedConfs[indexInSortedConfs])
-                    targets2ConfId[currTargetSet] = nUniqueConfs
-                    nUniqueConfs += 1
-                indexInSortedConfs += 1
+            tuplize = lambda targetsSet: tuple(sorted(targetsSet))
+
+        # a mapping from target set to the best conf ID of that set
+        targets2ConfId = {}
+        indexInSortedConfs = 0
+        nUniqueConfs = 0
+        # remove dups from output confs - and add more confs if possible
+        while (nUniqueConfs < trimParam) and (indexInSortedConfs < nConfs):
+            targetSet = sortedConfs[indexInSortedConfs].targets
+            currTargetSet = tuplize(targetSet)
+            # if we encountered this set before
+            if targets2ConfId.has_key(currTargetSet):
+                foundConfVal = outputConfs[targets2ConfId[currTargetSet]].val
+                # if current val is better than what we saw
+                if foundConfVal > sortedConfs[indexInSortedConfs].val:
+                    outputConfs[targets2ConfId[currTargetSet]] = sortedConfs[indexInSortedConfs]
+            else:
+                # this conf is not yet encountered:
+                outputConfs.append(sortedConfs[indexInSortedConfs])
+                targets2ConfId[currTargetSet] = nUniqueConfs
+                nUniqueConfs += 1
+            indexInSortedConfs += 1
         return outputConfs 
     
     def bfsConfBuilder(self, lastLevelConfs):
