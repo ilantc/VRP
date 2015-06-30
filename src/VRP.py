@@ -111,8 +111,7 @@ class VRP:
                 newConfVal      = currConf.val - lastDistanceTravelled + self.getDistance(targetId,0) + self.getDistance(lastTarget, targetId) 
                 newConf         = conf(newConfTargets, self, newConfVal, newFinishTime, newCapacity)
                 newConfs.append(newConf)
-        return newConfs
-        
+        return newConfs        
            
 class conf:
     

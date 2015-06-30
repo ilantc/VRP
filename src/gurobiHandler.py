@@ -53,3 +53,4 @@ class vrpSolver():
             totalDist += self.confs[con].val
             print self.confs[con].targets
         print "\nnVehicels =",len(chosenConfs), "total distance =",totalDist
+        return [len(chosenConfs),totalDist]
