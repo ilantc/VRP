@@ -5,7 +5,7 @@ from gurobiHandler import vrpSolver
 import csv
 import getopt
 import sys
-
+import os
 class vrpRunner:
     
     def __init__(self,readerType):
@@ -33,9 +33,13 @@ class filePrinter:
         pass
     
     def printRes(self,allRes,filename,headers):
-        csvfile = open(filename, 'wb')
+        writeHeader = True
+        if os.path.isfile(filename):
+            writeHeader = False
+        csvfile = open(filename, 'ab')
         writer = csv.DictWriter(csvfile, fieldnames=headers)
-        writer.writeheader()
+        if writeHeader:
+            writer.writeheader()
         writer.writerows(allRes)
         csvfile.close
 
