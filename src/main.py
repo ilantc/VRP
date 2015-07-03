@@ -3,12 +3,12 @@ import os
 import sys
 
 optiosHnadler   = utils.optionsHandler(sys.argv)
-(runParam,buildParam,solomonLib) = optiosHnadler.parseOptions()
+(runParam,buildParam,solomonLib,timeout) = optiosHnadler.parseOptions()
 dirName = "solomon_" + str(solomonLib) 
 runner          = utils.vrpRunner('solomon')
 filePrinter     = utils.filePrinter()
 bestsol         = utils.bestSols()
-headers         = ["fileName","buildParam","runParam","maxConfSize","confBuildTime","solverTime","opt_n_trucks","opt_distance","nTrucks","totalDistance"]
+headers         = ["fileName","buildParam","runParam","maxConfSize","confBuildTime","solverTime","opt_n_trucks","opt_distance","nTrucks","totalDistance","isOpt"]
 dirNames2sols   = {"solomon_25":bestsol.all25Data,"solomon_50":bestsol.all50Data,"solomon_100":bestsol.all100Data}
 dirNames        = dirNames2sols.keys()
 dataDir         = "../data/"
@@ -21,7 +21,7 @@ for f in os.listdir(dataDir + dirName):
 outputFileName = "res_" + dirName + ".csv"
 allRes = []
 for f in allFiles:
-    res = runner.generateAndSolveInstance(dataDir + dirName + "/" + f, buildParam, runParam, maxConfSize)
+    res = runner.generateAndSolveInstance(dataDir + dirName + "/" + f, buildParam, runParam, maxConfSize,timeout)
     solKey = f[:-4]
     if solKey in dirNames2sols[dirName]:
         res["opt_n_trucks"] = dirNames2sols[dirName][solKey][0]

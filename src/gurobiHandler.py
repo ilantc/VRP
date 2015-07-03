@@ -2,7 +2,7 @@ import gurobipy
 
 class vrpSolver():
     
-    def __init__(self, confs, VRPobject):
+    def __init__(self, confs, VRPobject,timeout):
         indices = {}
         for i in range(1,VRPobject.nTargets):
             indices[i] = []
@@ -16,6 +16,7 @@ class vrpSolver():
         self.indices = indices
         self.VRPobj = VRPobject
         self.M      = 1000 
+        self.timeout = timeout
             
     def buildIP(self):
         model = gurobipy.Model('VRPModel')
@@ -33,7 +34,7 @@ class vrpSolver():
         # objective
         model.setObjective(gurobipy.quicksum(x[i]*(self.confs[i].val + self.M) for i in range(len(self.confs))))
         model.setAttr("modelSense", gurobipy.GRB.MINIMIZE)
-        model.setParam('TimeLimit', 3*60)
+        model.setParam('TimeLimit', self.timeout)
         model.update()
         
         self.x = x
@@ -43,7 +44,10 @@ class vrpSolver():
         # Compute optimal solution
         self.model.optimize()
         chosenConfs = []
-        if self.model.status == gurobipy.GRB.status.OPTIMAL:
+        isOptimal = True
+        if self.model.status in [gurobipy.GRB.status.OPTIMAL,gurobipy.GRB.status.TIME_LIMIT]:
+            if self.model.status == gurobipy.GRB.status.OPTIMAL:
+                isOptimal = True
             for i in range(len(self.confs)):
                 if self.x[i].x > 0:
                     print "conf", i, "was chosen"
@@ -54,4 +58,4 @@ class vrpSolver():
             totalDist += self.confs[con].val
             print self.confs[con].targets
         print "\nnVehicels =",len(chosenConfs), "total distance =",totalDist
-        return [len(chosenConfs),totalDist]
+        return [len(chosenConfs),totalDist,isOptimal]
