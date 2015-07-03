@@ -33,6 +33,7 @@ class vrpSolver():
         # objective
         model.setObjective(gurobipy.quicksum(x[i]*(self.confs[i].val + self.M) for i in range(len(self.confs))))
         model.setAttr("modelSense", gurobipy.GRB.MINIMIZE)
+        model.setParam('TimeLimit', 3*60)
         model.update()
         
         self.x = x

@@ -3,6 +3,8 @@ import readers
 import time
 from gurobiHandler import vrpSolver
 import csv
+import getopt
+import sys
 
 class vrpRunner:
     
@@ -36,6 +38,70 @@ class filePrinter:
         writer.writeheader()
         writer.writerows(allRes)
         csvfile.close
+
+class optionsHandler:
+    
+    def usage(self):
+        print "-r <run param>"
+        print "-b <build param>"
+        print "-n [25|50|100] <solomon lib>"
+        
+    def assertOptions(self,runParam,buildParam,solomonLib):
+        message = ""
+        if runParam == 0:
+            message += "must supply run param"
+        if buildParam == 0:
+            message += "must supply build param"
+        if solomonLib == 0:
+            message += "must supply solomonLib"
+        if message != "":
+            print "one or more errors in parsing input:"
+            print message
+            self.usage()
+            sys.exit(2)
+            
+    
+    def __init__(self,args):
+        try:
+            opts, _ = getopt.gnu_getopt(args[1:], "r:b:n:")
+            self.opts = opts
+        except getopt.GetoptError as err:
+            # print help information and exit:
+            print str(err) # will print something like "option -a not recognized"
+            self.usage()
+            sys.exit(2)
+    
+    def parseOptions(self):
+        runParam = 0
+        buildParam = 0
+        solomonLib = 0
+        for o, a in self.opts:
+            if o == "-h":
+                self.usage()
+                sys.exit(0)
+            elif o == "-r":
+                runParam = int(a)
+                if runParam < 0:
+                    print "invalid run param", a
+                    sys.exit(0)
+            elif o == "-b":
+                buildParam = int(a)
+                if buildParam < 0:
+                    print "invalid build param", a
+                    sys.exit(0)
+            elif o == "-n":
+                solomonLib = int(a)
+                if solomonLib not in [25,50,100]:
+                    print "invalid solomonLib", a
+                    sys.exit(0)
+            else:
+                assert False, "unhandled option : " + o
+        self.assertOptions(runParam,buildParam,solomonLib)
+        return (runParam,buildParam,solomonLib)
+
+
+        
+    
 
 class bestSols:
     def __init__(self):
