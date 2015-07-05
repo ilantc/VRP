@@ -2,9 +2,15 @@ import utils
 import os
 import sys
 
-optiosHnadler   = utils.optionsHandler(sys.argv)
-(runParam,buildParam,solomonLib,timeout) = optiosHnadler.parseOptions()
-dirName = "solomon_" + str(solomonLib) 
+dbg = True
+if not dbg:
+    optiosHnadler   = utils.optionsHandler(sys.argv)
+    (runParam,buildParam,solomonLib,timeout) = optiosHnadler.parseOptions()
+    dirName = "solomon_" + str(solomonLib)
+else:
+    dirName = "solomon_" + str(25)
+    f = "RC202.txt"
+    runParam,buildParam,timeout = 1000,1000,50000
 runner          = utils.vrpRunner('solomon')
 filePrinter     = utils.filePrinter()
 bestsol         = utils.bestSols()
@@ -14,6 +20,9 @@ dirNames        = dirNames2sols.keys()
 dataDir         = "../data/"
 maxConfSize     = 50
 
+if dbg:
+    res = runner.generateAndSolveInstance(dataDir + dirName + "/" + f, buildParam, runParam, maxConfSize,timeout)
+    sys.exit()
 allFiles = []
 for f in os.listdir(dataDir + dirName):
     if f.endswith(".txt"):
