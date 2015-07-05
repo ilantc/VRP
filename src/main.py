@@ -2,7 +2,7 @@ import utils
 import os
 import sys
 
-dbg = True
+dbg = False
 if not dbg:
     optiosHnadler   = utils.optionsHandler(sys.argv)
     (runParam,buildParam,solomonLib,timeout) = optiosHnadler.parseOptions()
@@ -28,7 +28,8 @@ for f in os.listdir(dataDir + dirName):
     if f.endswith(".txt"):
         allFiles.append(f)
 outputFileName = "res_" + dirName + ".csv"
-allRes = []
+filePrinter.printHeaderIfNewFile(outputFileName, headers)
+fileIndex = 1
 for f in allFiles:
     res = runner.generateAndSolveInstance(dataDir + dirName + "/" + f, buildParam, runParam, maxConfSize,timeout)
     solKey = f[:-4]
@@ -38,5 +39,6 @@ for f in allFiles:
     else:
         res["opt_n_trucks"] = "n/a"
         res["opt_distance"] = "n/a"
-    allRes.append(res)
-filePrinter.printRes(allRes, outputFileName,headers)
+    filePrinter.printSingleRes(res, outputFileName, headers)
+    print "\n\ndone file",fileIndex, "out of", len(allFiles),"\n"
+    fileIndex += 1

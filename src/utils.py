@@ -32,6 +32,21 @@ class filePrinter:
     def __init__(self):
         pass
     
+    def printHeaderIfNewFile(self,filename,headers):
+        if not os.path.isfile(filename):
+            csvfile = open(filename, 'ab')
+            writer = csv.DictWriter(csvfile, fieldnames=headers)
+            writer.writeheader()
+            csvfile.close()
+
+    
+    def printSingleRes(self,res,filename,headers):
+        csvfile = open(filename, 'ab')
+        writer = csv.DictWriter(csvfile, fieldnames=headers)
+        writer.writerow(res)
+        csvfile.close
+
+    
     def printRes(self,allRes,filename,headers):
         writeHeader = True
         if os.path.isfile(filename):
