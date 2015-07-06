@@ -6,6 +6,7 @@ import csv
 import getopt
 import sys
 import os
+
 class vrpRunner:
     
     def __init__(self,readerType):
@@ -39,14 +40,12 @@ class filePrinter:
             writer.writeheader()
             csvfile.close()
 
-    
     def printSingleRes(self,res,filename,headers):
         csvfile = open(filename, 'ab')
         writer = csv.DictWriter(csvfile, fieldnames=headers)
         writer.writerow(res)
         csvfile.close
 
-    
     def printRes(self,allRes,filename,headers):
         writeHeader = True
         if os.path.isfile(filename):
@@ -127,10 +126,6 @@ class optionsHandler:
                 assert False, "unhandled option : " + o
         self.assertOptions(runParam,buildParam,solomonLib,timeout)
         return (runParam,buildParam,solomonLib,timeout)
-
-
-        
-    
 
 class bestSols:
     def __init__(self):
