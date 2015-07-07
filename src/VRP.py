@@ -2,10 +2,11 @@ from math import sqrt, floor
 import math
 class VRP:
     
-    def __init__(self,nTrucks,capacity,targetsData, speed = 1):
+    def __init__(self,nTrucks,capacity,targetsData, speed = 1, roundingMethod = None):
         self.nTrucks         = nTrucks
         self.capacity        = capacity
         self.speed           = speed
+        self.roundingMethod  = roundingMethod 
         self.targetLocations = [(target['x'],target['y'])       for target in targetsData]
         self.targetsWindows  = [(target['start'],target['end']) for target in targetsData]
         self.targetDurations = [target['duration']              for target in targetsData]
@@ -53,7 +54,7 @@ class VRP:
             return (success,newFinish,newCapacity)
         waitingTime = max(0,windowStart - arrivalTime)
         newFinish   = arrivalTime + self.targetDurations[targetId] + waitingTime
-        # chek taht we return to depot in time
+        # chekc that we return to depot in time
         if newFinish + (self.getDistance(targetId,0) / self.speed) <= self.targetsWindows[0][1]:
             success     = True
         return (success,newFinish,newCapacity)
@@ -61,9 +62,42 @@ class VRP:
     def getDistance(self,t1,t2):
         (x1,y1) = self.targetLocations[t1]
         (x2,y2) = self.targetLocations[t2]
-        # as done in http://pubsonline.informs.org/doi/pdf/10.1287/trsc.33.1.101 
-        output = floor(10 * sqrt( math.pow(x1 - x2,2) + math.pow(y1 - y2,2) ))/10
+        if self.roundingMethod == "floor":
+            # as done in http://pubsonline.informs.org/doi/pdf/10.1287/trsc.33.1.101
+            output = floor(10 * sqrt( math.pow(x1 - x2,2) + math.pow(y1 - y2,2) ))/10
+        else:
+            output = sqrt( math.pow(x1 - x2,2) + math.pow(y1 - y2,2))
         return output
+    
+    def performShortcuts(self,optimalConfs):
+        newTargetsSets = [c.targets[:] for c in optimalConfs]
+        for target in range(1,self.nTargets):
+            bestShortcut    = -1
+            bestGain        = 10000
+            foundConfs      = []
+            for confId in range(len(optimalConfs)):
+                currTargetSet = newTargetsSets[confId]
+                try:
+                    targetIndex = currTargetSet.index(target)
+                except ValueError:
+                    continue
+                prevTarget = 0
+                if targetIndex > 0:
+                    prevTarget = currTargetSet[targetIndex - 1]
+                nextTarget = 0
+                if targetIndex < (len(currTargetSet) - 1):
+                    nextTarget = currTargetSet[targetIndex + 1]
+                gain = self.getDistance(prevTarget, target) + self.getDistance(target, nextTarget) - self.getDistance(prevTarget, nextTarget)
+                # try to keep the conf with the minimal gain, and remove all the rest
+                if (len(foundConfs) == 0) or (bestGain > gain): 
+                    bestGain = gain
+                    bestShortcut = confId                    
+                foundConfs.append(confId)
+#             print "targt =", target, "bestshortcut =",bestShortcut,foundConfs
+            foundConfs.remove(bestShortcut)
+            for confId in foundConfs:
+                newTargetsSets[confId].remove(target)
+        return map(lambda targetSet: conf(targetSet,self),newTargetsSets)
     
     def trimConfs(self,confs,trimParam, removeDupsTest = False):
 #         return confs
@@ -165,7 +199,11 @@ class conf:
             earlyArrival     = timeToTravel + currTime 
             windowStart      = self.VRPobject.targetsWindows[target][0]
             waitingTime      = max(0,windowStart - earlyArrival)
-            print target, "starting at", currTime + timeToTravel + waitingTime, "window is", self.VRPobject.targetsWindows[target]
+            feasibleAssignmentStr = '' 
+            if currTime + timeToTravel + waitingTime > self.VRPobject.targetsWindows[target][1]:
+                feasibleAssignmentStr = "**"
+            print target, "starting at", currTime + timeToTravel + waitingTime, "window is", self.VRPobject.targetsWindows[target], \
+                "capacity is", self.VRPobject.targetDemand[target], feasibleAssignmentStr
             currTime        += timeToTravel + waitingTime + timeToService 
             prevTarget       = target
         distanceRounded += self.VRPobject.getDistance(prevTarget,0)

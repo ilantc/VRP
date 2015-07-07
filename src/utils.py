@@ -15,18 +15,27 @@ class vrpRunner:
         else:
             raise Exception("illegal reader type: " + readerType)
     
-    def generateAndSolveInstance(self,fileName,buildParam,runParam,maxConfSize,timeout):
+    def generateAndSolveInstance(self,fileName,buildParam,runParam,maxConfSize,timeout,setNumTrucks):
         data = self.reader.readFile(fileName)
         vrp = VRP.VRP(data["nTrucks"], data["capacity"], data["targets"])
         t1 = time.time()
         confs = vrp.bfsConfBuilderWrapper(buildParam, runParam, maxConfSize)
         t2 = time.time()
-        s = vrpSolver(confs, vrp,timeout)
-        s.buildIP()
-        [nVehicles,totalDistance,isOpt] = s.solve()
+        if setNumTrucks:
+            for nConfs in range(1,vrp.nTargets):
+                print "trying with nConfs",nConfs,"..."
+                s = vrpSolver(confs, vrp,timeout)
+                s.buildIP(nConfs)
+                [nVehicles,totalDistance,exitOnTimeOut] = s.solve()
+                if nVehicles > -1:
+                    break
+        else:
+            s = vrpSolver(confs, vrp,timeout)
+            s.buildIP()
+            [nVehicles,totalDistance,exitOnTimeOut] = s.solve()
         t3 = time.time()
         return {'nTrucks' : nVehicles, 'totalDistance':totalDistance,'confBuildTime': t2 - t1, 'solverTime': t3 - t2,"fileName":fileName,\
-                "buildParam":buildParam,"runParam":runParam,"maxConfSize":maxConfSize,"isOpt":isOpt}
+                "buildParam":buildParam,"runParam":runParam,"maxConfSize":maxConfSize,"exitOnTimeOut":exitOnTimeOut}
 
 class filePrinter:
     
@@ -64,6 +73,7 @@ class optionsHandler:
         print "-b <build param>"
         print "-n [25|50|100] <solomon lib>"
         print "-t <gurobi timeout>"
+        print "-s [t|f] <iteratively solve with a set num of trucks, default is f>"
         
     def assertOptions(self,runParam,buildParam,solomonLib,timeout):
         message = ""
@@ -85,7 +95,7 @@ class optionsHandler:
     
     def __init__(self,args):
         try:
-            opts, _ = getopt.gnu_getopt(args[1:], "r:b:n:t:")
+            opts, _ = getopt.gnu_getopt(args[1:], "r:b:n:t:s:")
             self.opts = opts
         except getopt.GetoptError as err:
             # print help information and exit:
@@ -98,10 +108,18 @@ class optionsHandler:
         buildParam = 0
         solomonLib = 0
         timeout = 0
+        setNumTrucks = False
         for o, a in self.opts:
             if o == "-h":
                 self.usage()
                 sys.exit(0)
+            elif o == "-s":
+                if a == "t":
+                    setNumTrucks = True
+                elif a != "f":
+                    print "invalid value for -s", a
+                    self.usage()
+                    sys.exit(0)
             elif o == "-r":
                 runParam = int(a)
                 if runParam < 0:
@@ -125,7 +143,7 @@ class optionsHandler:
             else:
                 assert False, "unhandled option : " + o
         self.assertOptions(runParam,buildParam,solomonLib,timeout)
-        return (runParam,buildParam,solomonLib,timeout)
+        return (runParam,buildParam,solomonLib,timeout,setNumTrucks)
 
 class bestSols:
     def __init__(self):

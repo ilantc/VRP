@@ -5,23 +5,23 @@ import sys
 dbg = False
 if not dbg:
     optiosHnadler   = utils.optionsHandler(sys.argv)
-    (runParam,buildParam,solomonLib,timeout) = optiosHnadler.parseOptions()
+    (runParam,buildParam,solomonLib,timeout,setNumTrucks) = optiosHnadler.parseOptions()
     dirName = "solomon_" + str(solomonLib)
 else:
     dirName = "solomon_" + str(25)
-    f = "RC202.txt"
-    runParam,buildParam,timeout = 1000,1000,50000
+    f = "R202.txt"
+    runParam,buildParam,timeout,setNumTrucks = 1000,1000,50000,True
 runner          = utils.vrpRunner('solomon')
 filePrinter     = utils.filePrinter()
 bestsol         = utils.bestSols()
-headers         = ["fileName","buildParam","runParam","maxConfSize","confBuildTime","solverTime","opt_n_trucks","opt_distance","nTrucks","totalDistance","isOpt"]
+headers         = ["fileName","buildParam","runParam","maxConfSize","confBuildTime","solverTime","opt_n_trucks","opt_distance","nTrucks","totalDistance","exitOnTimeOut"]
 dirNames2sols   = {"solomon_25":bestsol.all25Data,"solomon_50":bestsol.all50Data,"solomon_100":bestsol.all100Data}
 dirNames        = dirNames2sols.keys()
 dataDir         = "../data/"
 maxConfSize     = 50
 
 if dbg:
-    res = runner.generateAndSolveInstance(dataDir + dirName + "/" + f, buildParam, runParam, maxConfSize,timeout)
+    res = runner.generateAndSolveInstance(dataDir + dirName + "/" + f, buildParam, runParam, maxConfSize,timeout,setNumTrucks)
     sys.exit()
 allFiles = []
 for f in os.listdir(dataDir + dirName):
@@ -31,7 +31,7 @@ outputFileName = "res_" + dirName + ".csv"
 filePrinter.printHeaderIfNewFile(outputFileName, headers)
 fileIndex = 1
 for f in allFiles:
-    res = runner.generateAndSolveInstance(dataDir + dirName + "/" + f, buildParam, runParam, maxConfSize,timeout)
+    res = runner.generateAndSolveInstance(dataDir + dirName + "/" + f, buildParam, runParam, maxConfSize,timeout,setNumTrucks)
     solKey = f[:-4]
     if solKey in dirNames2sols[dirName]:
         res["opt_n_trucks"] = dirNames2sols[dirName][solKey][0]
