@@ -8,9 +8,9 @@ if not dbg:
     (runParam,buildParam,solomonLib,timeout,setNumTrucks) = optiosHnadler.parseOptions()
     dirName = "solomon_" + str(solomonLib)
 else:
-    dirName = "solomon_" + str(25)
-    f = "R202.txt"
-    runParam,buildParam,timeout,setNumTrucks = 1000,1000,50000,True
+    dirName = "solomon_" + str(100)
+    f = "C208.txt"
+    runParam,buildParam,timeout,setNumTrucks = 10000,10000,18000,True
 runner          = utils.vrpRunner('solomon')
 filePrinter     = utils.filePrinter()
 bestsol         = utils.bestSols()

@@ -29,6 +29,9 @@ class vrpRunner:
                 [nVehicles,totalDistance,exitOnTimeOut] = s.solve()
                 if nVehicles > -1:
                     break
+                if nVehicles == -2:
+                    return {'nTrucks' : "n/a", 'totalDistance':"n/a",'confBuildTime': t2 - t1, 'solverTime': time.time() - t2,"fileName":fileName,\
+                "buildParam":buildParam,"runParam":runParam,"maxConfSize":maxConfSize,"exitOnTimeOut":exitOnTimeOut}
         else:
             s = vrpSolver(confs, vrp,timeout)
             s.buildIP()

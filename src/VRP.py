@@ -16,8 +16,7 @@ class VRP:
     def bfsConfBuilderWrapper(self, buildParam, runParam,MaxSizeConf):
         confs=[]
         emptyconf=conf([], self, 0, 0, 0)
-        confs.append(emptyconf)
-        lastLevelConfs = confs
+        lastLevelConfs = [emptyconf]
         for confSize in xrange(0,MaxSizeConf+1):
             if len(lastLevelConfs) == 0:
                 break
@@ -99,16 +98,18 @@ class VRP:
                 newTargetsSets[confId].remove(target)
         return map(lambda targetSet: conf(targetSet,self),newTargetsSets)
     
-    def trimConfs(self,confs,trimParam, removeDupsTest = False):
+    def trimConfs(self,confs,trimParam, forRun = False):
 #         return confs
         nConfs = len(confs)
-        sortedConfs = sorted(confs, key=lambda conf: conf.val)
         outputConfs = []
-        if not removeDupsTest:
-            tuplize = lambda targetsSet: tuple([targetsSet[-1]] + sorted(targetsSet[:-1]))
-        else:
+        if forRun:
             tuplize = lambda targetsSet: tuple(sorted(targetsSet))
-
+            getVal  = lambda c: c.val
+        else:
+            tuplize = lambda targetsSet: tuple([targetsSet[-1]] + sorted(targetsSet[:-1]))
+            getVal  = lambda c: c.val - self.getDistance(0, c.targets[0]) - self.getDistance(c.targets[-1],0) 
+        
+        sortedConfs = sorted(confs, key=getVal)
         # a mapping from target set to the best conf ID of that set
         targets2ConfId = {}
         indexInSortedConfs = 0
@@ -119,9 +120,9 @@ class VRP:
             currTargetSet = tuplize(targetSet)
             # if we encountered this set before
             if targets2ConfId.has_key(currTargetSet):
-                foundConfVal = outputConfs[targets2ConfId[currTargetSet]].val
+                foundConfVal = getVal(outputConfs[targets2ConfId[currTargetSet]])
                 # if current val is better than what we saw
-                if foundConfVal > sortedConfs[indexInSortedConfs].val:
+                if foundConfVal > getVal(sortedConfs[indexInSortedConfs]):
                     outputConfs[targets2ConfId[currTargetSet]] = sortedConfs[indexInSortedConfs]
             else:
                 # this conf is not yet encountered:

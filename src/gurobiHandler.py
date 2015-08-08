@@ -20,6 +20,7 @@ class vrpSolver():
             
     def buildIP(self, setNumTrucks = None):
         model = gurobipy.Model('VRPModel')
+        model.setParam('OutputFlag',False)
         
         # variables
         x = {}
@@ -48,7 +49,6 @@ class vrpSolver():
     
     def solve(self):
         # Compute optimal solution
-        self.model.setParam('OutputFlag', False )
         self.model.optimize()
         chosenConfs = []
         exitOnTimeOut = False
@@ -58,6 +58,9 @@ class vrpSolver():
         if self.model.status in [gurobipy.GRB.status.OPTIMAL,gurobipy.GRB.status.TIME_LIMIT]:
             if self.model.status == gurobipy.GRB.status.TIME_LIMIT:
                 exitOnTimeOut = True
+            if (self.model.SolCount == 0) and exitOnTimeOut:
+                print "exit on timeout with no feasible solution!"
+                return [-2,-1,exitOnTimeOut]
             for i in range(len(self.confs)):
                 if self.x[i].x > 0:
                     print "conf", i, "was chosen"
