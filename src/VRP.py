@@ -1,5 +1,7 @@
 from math import sqrt, floor
 import math
+from gurobiHandler import confsTrimmer
+
 class VRP:
     
     def __init__(self,nTrucks,capacity,targetsData, speed = 1, roundingMethod = None):
@@ -13,7 +15,7 @@ class VRP:
         self.targetDemand    = [target['demand']                for target in targetsData]
         self.nTargets        = len(self.targetDemand)
 
-    def bfsConfBuilderWrapper(self, buildParam, runParam,MaxSizeConf):
+    def bfsConfBuilderWrapper(self, buildParam, runParam,MaxSizeConf,alpha):
         confs=[]
         emptyconf=conf([], self, 0, 0, 0)
         lastLevelConfs = [emptyconf]
@@ -21,10 +23,12 @@ class VRP:
             if len(lastLevelConfs) == 0:
                 break
             newConfs        = self.bfsConfBuilder(lastLevelConfs)
-            lastLevelConfs  = self.trimConfs(newConfs, buildParam)
-            newConfsForRun  = self.trimConfs(lastLevelConfs, runParam, True)
+            # best confs for build, the rest will be chosen by solver
+            nBestConfs      = int(floor(alpha * buildParam)) 
+            lastLevelConfs  = self.trimConfs(newConfs, buildParam,True,nBestConfs)
+            newConfsForRun  = self.trimConfs(lastLevelConfs, runParam)
             confs.extend(newConfsForRun)
-            print "conf size =",confSize, "built", len(newConfs), "chosen for build", len(lastLevelConfs), "chosen for run", len(newConfsForRun)
+            print "conf size =",confSize + 1, "built", len(newConfs), "chosen for build", len(lastLevelConfs), "chosen for run", len(newConfsForRun)
         return confs
 
         
@@ -98,39 +102,44 @@ class VRP:
                 newTargetsSets[confId].remove(target)
         return map(lambda targetSet: conf(targetSet,self),newTargetsSets)
     
-    def trimConfs(self,confs,trimParam, forRun = False):
-#         return confs
-        nConfs = len(confs)
-        outputConfs = []
-        if forRun:
-            tuplize = lambda targetsSet: tuple(sorted(targetsSet))
-            getVal  = lambda c: c.val
-        else:
-            tuplize = lambda targetsSet: tuple([targetsSet[-1]] + sorted(targetsSet[:-1]))
-            getVal  = lambda c: c.val - self.getDistance(0, c.targets[0]) - self.getDistance(c.targets[-1],0) 
-        
-        sortedConfs = sorted(confs, key=getVal)
-        # a mapping from target set to the best conf ID of that set
+    def removeDups(self,confs,keyFn,valFn):
+        uniqConfs = []
         targets2ConfId = {}
-        indexInSortedConfs = 0
-        nUniqueConfs = 0
-        # remove dups from output confs - and add more confs if possible
-        while (nUniqueConfs < trimParam) and (indexInSortedConfs < nConfs):
-            targetSet = sortedConfs[indexInSortedConfs].targets
-            currTargetSet = tuplize(targetSet)
+        nConfs = len(confs)
+        for iteNum in range(nConfs):
+            targetSet = confs[iteNum].targets
+            currTargetSet = keyFn(targetSet)
             # if we encountered this set before
             if targets2ConfId.has_key(currTargetSet):
-                foundConfVal = getVal(outputConfs[targets2ConfId[currTargetSet]])
+                foundConfVal = valFn(uniqConfs[targets2ConfId[currTargetSet]])
                 # if current val is better than what we saw
-                if foundConfVal > getVal(sortedConfs[indexInSortedConfs]):
-                    outputConfs[targets2ConfId[currTargetSet]] = sortedConfs[indexInSortedConfs]
+                if foundConfVal > valFn(confs[iteNum]):
+                    uniqConfs[targets2ConfId[currTargetSet]] = confs[iteNum]
             else:
                 # this conf is not yet encountered:
-                outputConfs.append(sortedConfs[indexInSortedConfs])
-                targets2ConfId[currTargetSet] = nUniqueConfs
-                nUniqueConfs += 1
-            indexInSortedConfs += 1
-        return outputConfs 
+                uniqConfs.append(confs[iteNum])
+        return uniqConfs
+           
+    def trimConfs(self,confs,trimParam, forBuild = False,nBestConfs = 0):
+        if forBuild:
+            tuplize = lambda targetsSet: tuple([targetsSet[-1]] + sorted(targetsSet[:-1]))
+            getVal  = lambda c: c.val - self.getDistance(0, c.targets[0]) - self.getDistance(c.targets[-1],0) 
+        else:
+            tuplize = lambda targetsSet: tuple(sorted(targetsSet))
+            getVal  = lambda c: c.val
+        
+        uniqConfs = self.removeDups(confs, tuplize, getVal)
+        nConfs = len(uniqConfs)
+        if nConfs <= trimParam:
+            return uniqConfs
+        sortedConfs = sorted(confs, key=getVal)
+        if forBuild:
+            ct = confsTrimmer(sortedConfs, self.nTargets, trimParam, range(nBestConfs))
+            ct.buildLP()
+            confsIndices = ct.solve()
+            return [sortedConfs[confsIndex] for confsIndex in confsIndices]
+        else:
+            return sortedConfs[0:trimParam]
     
     def bfsConfBuilder(self, lastLevelConfs):
         newConfs = []

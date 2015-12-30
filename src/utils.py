@@ -6,6 +6,8 @@ import csv
 import getopt
 import sys
 import os
+import matplotlib.pyplot as plt
+import networkx as nx
 
 class vrpRunner:
     
@@ -15,11 +17,13 @@ class vrpRunner:
         else:
             raise Exception("illegal reader type: " + readerType)
     
-    def generateAndSolveInstance(self,fileName,buildParam,runParam,maxConfSize,timeout,setNumTrucks):
+    def generateAndSolveInstance(self,fileName,buildParam,runParam,maxConfSize,timeout,setNumTrucks,alphs, capacity = None):
         data = self.reader.readFile(fileName)
-        vrp = VRP.VRP(data["nTrucks"], data["capacity"], data["targets"])
+        if not capacity:
+            capacity = data["capacity"]
+        vrp = VRP.VRP(data["nTrucks"],capacity , data["targets"])
         t1 = time.time()
-        confs = vrp.bfsConfBuilderWrapper(buildParam, runParam, maxConfSize)
+        confs = vrp.bfsConfBuilderWrapper(buildParam, runParam, maxConfSize,alphs)
         t2 = time.time()
         if setNumTrucks:
             for nConfs in range(1,vrp.nTargets):
@@ -69,6 +73,47 @@ class filePrinter:
         writer.writerows(allRes)
         csvfile.close
 
+class graphPrinter:
+    
+    def __init__(self):
+        pass
+    
+    def printGraph(self,vrp,chosenConfs,name):
+        G=nx.Graph()
+        
+        # set positions
+        pos = {}
+        for target in range(len(vrp.targetLocations)):
+            pos[target] = vrp.targetLocations[target]
+            G.add_node(target)
+        
+        for c in chosenConfs:
+            G.add_cycle([0] + c.targets)
+        
+        nx.draw_networkx_nodes(G,pos,node_size=5)
+        nx.draw_networkx_edges(G,pos)
+        plt.axis('off')
+        plt.savefig(name) # save as png
+        plt.show() # display
+    
+    def printGraphFromIlog(self,truck2Targets,targets,name):
+        G=nx.Graph()
+        
+        # add nodes
+        for target in targets:
+            G.add_node(target)
+        G.add_node(0)
+        targets[0] = (35,35)
+        
+        for t in truck2Targets:
+            G.add_cycle([0] + truck2Targets[t])
+        
+        nx.draw_networkx_nodes(G,targets,node_size=5)
+        nx.draw_networkx_edges(G,targets)
+        plt.axis('off')
+        plt.savefig(name) # save as png
+        plt.show() # display
+        
 class optionsHandler:
     
     def usage(self):
@@ -76,9 +121,11 @@ class optionsHandler:
         print "-b <build param>"
         print "-n [25|50|100] <solomon lib>"
         print "-t <gurobi timeout>"
+        print "-i <instance name>"
         print "-s [t|f] <iteratively solve with a set num of trucks, default is f>"
+        print "-a <alpha*trimParam best confs, the rest will be chosen to maximize variance>"
         
-    def assertOptions(self,runParam,buildParam,solomonLib,timeout):
+    def assertOptions(self,runParam,buildParam,solomonLib,timeout,instanceName = None):
         message = ""
         if runParam == 0:
             message += "must supply run param"
@@ -88,6 +135,8 @@ class optionsHandler:
             message += "must supply solomonLib"
         if timeout == 0:
             message += "must supply timeout"
+        if instanceName == "":
+            message += "must supply instance name"
 
         if message != "":
             print "one or more errors in parsing input:"
@@ -98,7 +147,7 @@ class optionsHandler:
     
     def __init__(self,args):
         try:
-            opts, _ = getopt.gnu_getopt(args[1:], "r:b:n:t:s:")
+            opts, _ = getopt.gnu_getopt(args[1:], "r:b:n:t:s:i:a:")
             self.opts = opts
         except getopt.GetoptError as err:
             # print help information and exit:
@@ -106,11 +155,13 @@ class optionsHandler:
             self.usage()
             sys.exit(2)
     
-    def parseOptions(self):
+    def parseOptions(self,enforceInstanceName = False):
         runParam = 0
         buildParam = 0
         solomonLib = 0
         timeout = 0
+        alpha = 1.0
+        instanceName = ""
         setNumTrucks = False
         for o, a in self.opts:
             if o == "-h":
@@ -138,6 +189,13 @@ class optionsHandler:
                 if buildParam < 0:
                     print "invalid build param", a
                     sys.exit(0)
+            elif o == "-i":
+                instanceName = a
+            elif o == "-a":
+                alpha = float(a)
+                if alpha > 1.0 or alpha < 0.0:
+                    print "invalid alpha value", a
+                    sys.exit(0)
             elif o == "-n":
                 solomonLib = int(a)
                 if solomonLib not in [25,50,100]:
@@ -145,8 +203,12 @@ class optionsHandler:
                     sys.exit(0)
             else:
                 assert False, "unhandled option : " + o
-        self.assertOptions(runParam,buildParam,solomonLib,timeout)
-        return (runParam,buildParam,solomonLib,timeout,setNumTrucks)
+        if enforceInstanceName:
+            self.assertOptions(runParam,buildParam,solomonLib,timeout,instanceName)
+            return (runParam,buildParam,solomonLib,timeout,setNumTrucks,alpha,instanceName)
+        else: 
+            self.assertOptions(runParam,buildParam,solomonLib,timeout)
+            return (runParam,buildParam,solomonLib,timeout,setNumTrucks,alpha)
 
 class bestSols:
     def __init__(self):
